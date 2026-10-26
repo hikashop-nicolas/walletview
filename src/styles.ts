@@ -38,6 +38,15 @@ const CSS = `
 .wv-footer { max-width:100%; object-fit:contain; align-self:center; }
 .wv-note { margin:0; padding:8px 12px; border:1px solid var(--wv-border); border-radius:8px; background:var(--wv-surface); font-size:13px; }
 .wv-note-warn { border-color:#c77700; }
+.wv-note-ok { border-color:#2e8540; }
+.wv-note-failed { border-color:#c5221f; }
+.wv-note-unavailable { border-color:#c77700; }
+.wv-note > div + div { margin-top:4px; color:var(--wv-muted); }
+.wv-btn { display:block; margin-top:8px; padding:6px 12px; font:inherit; color:inherit; background:transparent;
+  border:1px solid var(--wv-border); border-radius:8px; cursor:pointer; }
+.wv-btn:hover:not(:disabled) { background:var(--wv-canvas); }
+.wv-btn:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+.wv-btn:disabled { opacity:.6; cursor:default; }
 .wv-back { background:var(--wv-surface); border:1px solid var(--wv-border); border-radius:12px; padding:14px 16px; }
 .wv-back h2 { margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--wv-muted); }
 .wv-back dl { margin:0; display:flex; flex-direction:column; gap:10px; }

@@ -40,10 +40,20 @@ describe("SMART Health Card", () => {
     const [card] = readWallet(healthCardFile(jws), ["en-GB"], t);
     expect(card!.primary[0]!.value).toBe("Jane Q. Example");
     expect(card!.secondary[0]!.value).toMatch(/3 Feb 1980/);
-    expect(card!.auxiliary[0]).toMatchObject({ label: "Pfizer-BioNTech" });
+    expect(card!.auxiliary[0]).toMatchObject({ label: "Pfizer-BioNTech COVID-19" });
     expect(card!.auxiliary[1]!.label).toBe("SARS-CoV-2 test");
     expect(card!.back.some((f) => f.value.includes("LOT42"))).toBe(true);
     expect(card!.back.some((f) => f.value === "https://issuer.example.com/demo")).toBe(true);
+  });
+
+  it("names codes from the built-in LOINC and CVX tables", () => {
+    const named = makeHealthCardJws([
+      { resourceType: "Observation", code: { coding: [{ system: "http://loinc.org", code: "718-7" }] }, valueQuantity: { value: 14.2, unit: "g/dL" }, effectiveDateTime: "2022-01-02" },
+      { resourceType: "Observation", code: { coding: [{ system: "http://loinc.org", code: "0000-0" }] }, valueString: "x" },
+    ]);
+    const [card] = readWallet(healthCardFile(named), ["en"], t);
+    expect(card!.auxiliary[1]).toMatchObject({ label: "Hemoglobin [Mass/volume] in Blood", value: "14.2 g/dL" });
+    expect(card!.auxiliary[2]!.label).toBe("0000-0"); // unknown codes stay as codes
   });
 
   it("gives the card a QR that reproduces the shc link", () => {

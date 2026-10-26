@@ -4,6 +4,7 @@
 
 import { unzipSync } from "fflate";
 import type { Card, CardBarcode, CardField, CardImages, CardStyle } from "./model";
+import { translator } from "./i18n";
 import { decodeStrings, parseStrings } from "./strings";
 
 const MAX_ENTRIES = 600;
@@ -36,6 +37,7 @@ const DATE_STYLES: Record<string, "short" | "medium" | "long" | "full"> = {
   PKDateStyleFull: "full",
 };
 
+type T = (key: string, vars?: Record<string, string | number>) => string;
 type Files = Record<string, Uint8Array>;
 type Json = Record<string, unknown>;
 
@@ -150,7 +152,7 @@ function readBarcodes(d: Json): CardBarcode[] {
   return out;
 }
 
-function readPass(files: Files, langs: string[]): Card {
+function readPass(files: Files, langs: string[], zip: Uint8Array, t: T): Card {
   const raw = files["pass.json"];
   if (!raw) throw new Error("pass.json is missing");
   const parsed: unknown = JSON.parse(new TextDecoder().decode(raw).replace(/^﻿/, ""));
@@ -210,6 +212,7 @@ function readPass(files: Files, langs: string[]): Card {
     back: readFields(section.backFields, tr, lang),
     barcodes: readBarcodes(parsed),
     images,
+    verify: { run: () => import("./verify").then((m) => m.verifyPkpass(zip, t)) },
     voided: parsed.voided === true,
     expired: !Number.isNaN(expiry) && expiry < Date.now(),
     release: () => {
@@ -223,10 +226,10 @@ export function looksLikeZip(bytes: Uint8Array): boolean {
 }
 
 // One card for a .pkpass, one per pass for a .pkpasses. Throws when nothing can be shown.
-export function readPkpass(bytes: Uint8Array, langs: string[]): Card[] {
+export function readPkpass(bytes: Uint8Array, langs: string[], t: T = translator()): Card[] {
   const budget = new Budget();
   const outer = unzipWanted(bytes, budget, (n) => WANTED.test(n) || /\.pkpass$/i.test(n));
-  if (outer["pass.json"]) return [readPass(outer, langs)];
+  if (outer["pass.json"]) return [readPass(outer, langs, bytes, t)];
   const inner = Object.keys(outer)
     .filter((n) => /\.pkpass$/i.test(n))
     .sort()
@@ -235,7 +238,7 @@ export function readPkpass(bytes: Uint8Array, langs: string[]): Card[] {
   let failure: unknown = null;
   for (const name of inner) {
     try {
-      cards.push(readPass(unzipWanted(outer[name]!, budget, (n) => WANTED.test(n)), langs));
+      cards.push(readPass(unzipWanted(outer[name]!, budget, (n) => WANTED.test(n)), langs, outer[name]!, t));
     } catch (e) {
       failure = e;
     }

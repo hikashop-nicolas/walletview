@@ -49,8 +49,20 @@ objects, and `readPkpass`, `readHealthCard` and `readBoardingPass` read one form
 - Formats dates, times, numbers and currencies in the viewer's locale.
 - Draws QR, PDF417, Aztec and Code 128 barcodes with [bwip-js](https://github.com/metafloor/bwip-js),
   loaded only when a pass has one.
-- Does **not** check any signature, and says so on the card. A health card's signature needs the
-  issuer's public key from the network, which a read-only offline viewer does not fetch.
+- Opens offline and checks no signature by itself. A **Check signature** button on the card does
+  it on request:
+  - a **health card** is checked against the public key its issuer publishes at
+    `<issuer>/.well-known/jwks.json`. That is the one network request, made only when the button
+    is pressed and only to an https website with a real domain name (never an IP address or a local
+    name). It proves the card was not altered; whether to trust the issuer is up to you. Pass
+    `confirmFetch` to ask first.
+  - a **.pkpass** is checked against the hashes in its manifest and the signature over that
+    manifest, using the certificate inside the file. This shows who signed it and that no file
+    changed afterwards. It does not check the certificate chain up to Apple, so it cannot tell a
+    genuine pass from one signed by someone else's certificate.
+  - an IATA boarding pass string carries no signature to check.
+- Names vaccines (CVX) and lab tests (LOINC) from built-in tables, about 10 KB gzipped. The LOINC
+  table is a subset of about 380 common tests; others show their code. See `NOTICE.md`.
 - Treats the file as untrusted: only the files it needs are inflated and capped in number and
   size, text is never parsed as HTML, colours must be plain `rgb()` values, and links are
   limited to http and https.

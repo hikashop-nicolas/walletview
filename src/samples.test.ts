@@ -12,7 +12,7 @@ describe.skipIf(!dir)("real sample files", () => {
   const files = dir ? fs.readdirSync(dir).filter((f) => /\.(pkpass|pkpasses|smart-health-card)$/.test(f)) : [];
   it("found some", () => expect(files.length).toBeGreaterThan(0));
   for (const f of files) {
-    it(`reads ${f}`, () => {
+    it(`reads ${f}`, async () => {
       const cards = readWallet(new Uint8Array(fs.readFileSync(path.join(dir!, f))), ["en-US"], translator());
       expect(cards.length).toBeGreaterThan(0);
       for (const c of cards) {
@@ -20,8 +20,11 @@ describe.skipIf(!dir)("real sample files", () => {
         expect(shown.length).toBeGreaterThan(0);
         expect(shown.every((x) => !/\[object|undefined|NaN/.test(x.value + x.label))).toBe(true);
         console.log(f, c.style, `fields=${shown.length}`, `barcodes=${c.barcodes.map((b) => b.format)}`, `images=${Object.entries(c.images).filter(([, v]) => v).map(([k]) => k)}`);
+        // Signatures too: health cards fetch their issuer's key, so this needs the network.
+        const outcome = await c.verify?.run();
+        console.log(f, "signature:", outcome?.status, outcome?.lines[0]);
         c.release();
       }
-    });
+    }, 30000);
   }
 });

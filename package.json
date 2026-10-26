@@ -1,6 +1,6 @@
 {
   "name": "walletview",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Standalone client-side viewer for wallet passes and cards: Apple Wallet .pkpass and .pkpasses, SMART Health Cards, IATA boarding pass text. Read-only, byte-in, no framework.",
   "type": "module",
   "license": "MIT",
@@ -14,7 +14,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "NOTICE.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",

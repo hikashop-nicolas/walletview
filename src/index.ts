@@ -17,6 +17,9 @@ export interface WalletViewOptions {
   languages?: string[];
   // Per-instance string overrides layered on the detected locale.
   i18n?: Dict;
+  // Asked before a signature check contacts a website (health cards fetch the issuer's key).
+  // Return false to cancel. Without it the check runs on the button press alone.
+  confirmFetch?: (url: string) => Promise<boolean>;
 }
 
 export interface WalletViewHandle {
@@ -55,7 +58,7 @@ export function createWalletView(
         c.textContent = t("passN", { n: i + 1, total: cards.length });
         list.appendChild(c);
       }
-      list.appendChild(renderCard(card, t, () => alive, urls));
+      list.appendChild(renderCard(card, t, () => alive, urls, options.confirmFetch));
     });
     root.appendChild(list);
   } catch (e) {
@@ -77,4 +80,5 @@ export { readWallet } from "./read";
 export { readBoardingPass, looksLikeBcbp } from "./boardingpass";
 export { readHealthCard, looksLikeHealthCard } from "./healthcard";
 export { setLocale, type Dict } from "./i18n";
-export type { Card, CardField, CardBarcode, CardStyle } from "./model";
+export { verifyHealthCard, verifyPkpass } from "./verify";
+export type { Card, CardField, CardBarcode, CardStyle, VerifyOutcome } from "./model";

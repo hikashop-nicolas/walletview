@@ -11,9 +11,9 @@ const MAX_TEXT = 2 * 1024 * 1024;
 export function readWallet(
   bytes: Uint8Array,
   langs: string[],
-  t: (key: string) => string,
+  t: (key: string, vars?: Record<string, string | number>) => string,
 ): Card[] {
-  if (looksLikeZip(bytes)) return readPkpass(bytes, langs);
+  if (looksLikeZip(bytes)) return readPkpass(bytes, langs, t);
   if (bytes.length <= MAX_TEXT && !bytes.subarray(0, 4096).includes(0)) {
     const text = new TextDecoder().decode(bytes).replace(/^﻿/, "");
     if (looksLikeHealthCard(text)) return readHealthCard(text, t, langs[0]);

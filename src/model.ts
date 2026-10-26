@@ -22,6 +22,12 @@ export interface CardImages {
 
 export type CardStyle = "boardingPass" | "eventTicket" | "coupon" | "storeCard" | "generic";
 
+export interface VerifyOutcome {
+  status: "ok" | "failed" | "unavailable";
+  // Short sentences for the person, already translated.
+  lines: string[];
+}
+
 export interface Card {
   style: CardStyle;
   transit?: "air" | "train" | "bus" | "boat" | "generic";
@@ -39,6 +45,9 @@ export interface Card {
   images: CardImages;
   voided?: boolean;
   expired?: boolean;
+  // Present when the file carries a signature that can be checked on request. `host` is the
+  // site a check would contact, when there is one.
+  verify?: { host?: string; run(confirm?: (url: string) => Promise<boolean>): Promise<VerifyOutcome> };
   // Frees the blob URLs held by `images`.
   release(): void;
 }

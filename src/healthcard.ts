@@ -3,23 +3,16 @@
 // verified: checking the signature needs the issuer's key over the network.
 
 import { inflateSync } from "fflate";
+import { CVX, LOINC } from "./codes";
+import { issuerHost } from "./issuer";
 import type { Card, CardBarcode, CardField } from "./model";
 
-type T = (key: string) => string;
+type T = (key: string, vars?: Record<string, string | number>) => string;
 type Json = Record<string, unknown>;
 
 const MAX_JWS = 20000;
 const QR_MAX = 1195;
 const QR_CHUNK = 1191;
-// Common COVID-19 vaccine codes of the CVX system.
-const CVX: Record<string, string> = {
-  "207": "Moderna",
-  "208": "Pfizer-BioNTech",
-  "210": "AstraZeneca",
-  "211": "Novavax",
-  "212": "Janssen",
-};
-
 const isObject = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
@@ -82,7 +75,9 @@ function codeText(c: unknown): string {
   const coding = Array.isArray(c.coding) ? c.coding.find(isObject) : undefined;
   if (!coding) return "";
   const code = str(coding.code);
-  return str(coding.display) || (/cvx$/.test(str(coding.system)) && CVX[code]) || code;
+  const system = str(coding.system);
+  const known = /cvx$/.test(system) ? CVX[code] : /loinc\.org/.test(system) ? LOINC[code] : undefined;
+  return str(coding.display) || known || code;
 }
 
 function personName(p: Json): string {
@@ -164,6 +159,7 @@ function cardFrom(jws: string, t: T, lang: string | undefined): Card {
     auxiliary: records,
     back: [...details, ...(iss ? [{ label: t("issuer"), value: iss }] : []), ...(issued ? [{ label: t("issued"), value: issued }] : [])],
     barcodes: shcBarcodes(jws),
+    verify: { host: issuerHost(iss.replace(/\/+$/, "")) ?? undefined, run: (confirm) => import("./verify").then((m) => m.verifyHealthCard(jws, t, confirm)) },
     images: {},
     release: () => {},
   };

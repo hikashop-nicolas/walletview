@@ -83,7 +83,43 @@ function barcodeBox(card: Card, t: T, alive: () => boolean, urls: string[]): HTM
   });
 }
 
-export function renderCard(card: Card, t: T, alive: () => boolean, urls: string[]): HTMLElement {
+// The "signature not checked" note, with a button that runs the check when the file has one.
+function signatureNote(card: Card, t: T, alive: () => boolean, confirm?: (url: string) => Promise<boolean>): HTMLElement {
+  const note = el("p", "wv-note");
+  note.appendChild(document.createTextNode(t("unverified")));
+  const verify = card.verify;
+  if (!verify) return note;
+  const button = el("button", "wv-btn", verify.host ? t("verifyHost", { host: verify.host }) : t("verify"));
+  button.type = "button";
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    button.textContent = t("verifying");
+    verify.run(confirm).then(
+      (outcome) => {
+        if (!alive()) return;
+        note.textContent = "";
+        note.className = `wv-note wv-note-${outcome.status}`;
+        note.setAttribute("role", "status");
+        for (const line of outcome.lines) note.appendChild(el("div", undefined, line));
+      },
+      () => {
+        if (!alive()) return;
+        button.disabled = false;
+        button.textContent = verify.host ? t("verifyHost", { host: verify.host }) : t("verify");
+      },
+    );
+  });
+  note.appendChild(button);
+  return note;
+}
+
+export function renderCard(
+  card: Card,
+  t: T,
+  alive: () => boolean,
+  urls: string[],
+  confirm?: (url: string) => Promise<boolean>,
+): HTMLElement {
   const article = el("article", "wv-card");
   article.setAttribute("role", "group");
   article.setAttribute("aria-label", card.description || card.organization || card.logoText || "Pass");
@@ -120,7 +156,7 @@ export function renderCard(card: Card, t: T, alive: () => boolean, urls: string[
   frag.appendChild(article);
   if (card.voided) frag.appendChild(el("p", "wv-note wv-note-warn", t("voided")));
   if (card.expired) frag.appendChild(el("p", "wv-note wv-note-warn", t("expired")));
-  frag.appendChild(el("p", "wv-note", t("unverified")));
+  frag.appendChild(signatureNote(card, t, alive, confirm));
   if (card.back.length) {
     const back = el("section", "wv-back");
     back.appendChild(el("h2", undefined, t("details")));
