@@ -19,13 +19,15 @@
     <div id="app">
       <header>
         <b>walletview</b>
-        <label>Open a pass <input id="file" type="file" accept=".pkpass,.pkpasses" /></label>
+        <label>Open a pass <input id="file" type="file" accept=".pkpass,.pkpasses,.smart-health-card,.txt" /></label>
         <button id="s1" type="button">Sample boarding pass</button>
         <button id="s2" type="button">Sample ticket</button>
         <button id="s3" type="button">Sample bundle</button>
+        <button id="s4" type="button">Sample health card</button>
+        <button id="s5" type="button">Sample BCBP text</button>
         <small>or drop one anywhere · everything stays in your browser</small>
       </header>
-      <div id="viewer"><div id="drop">Drop an Apple Wallet pass here (.pkpass or .pkpasses)</div></div>
+      <div id="viewer"><div id="drop">Drop a wallet pass here (.pkpass, .pkpasses, .smart-health-card, or boarding pass text)</div></div>
     </div>
     <script type="module" src="./demo.ts"></script>
   </body>

@@ -1,7 +1,7 @@
 {
   "name": "walletview",
-  "version": "0.1.0",
-  "description": "Standalone client-side viewer for wallet passes: Apple Wallet .pkpass and .pkpasses today, more pass and card formats later. Read-only, byte-in, no framework.",
+  "version": "0.2.0",
+  "description": "Standalone client-side viewer for wallet passes and cards: Apple Wallet .pkpass and .pkpasses, SMART Health Cards, IATA boarding pass text. Read-only, byte-in, no framework.",
   "type": "module",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -26,12 +26,14 @@
     "prepare": "tsc -p tsconfig.json"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "happy-dom": "^20.10.6",
     "typescript": "^7.0.2",
     "vite": "^8.0.16",
     "vitest": "^4.0.0"
   },
   "dependencies": {
+    "bcbp": "^6.0.2",
     "bwip-js": "^4.0.0",
     "fflate": "^0.8.3"
   }

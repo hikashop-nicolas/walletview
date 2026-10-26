@@ -1,9 +1,9 @@
 // walletview: a standalone, framework-agnostic, client-side viewer for wallet passes.
-// Bytes in, a rendered card out. Today it opens Apple Wallet .pkpass and .pkpasses files.
+// Bytes in, a rendered card out. It opens Apple Wallet .pkpass and .pkpasses files, SMART Health Cards, and IATA boarding pass barcode text.
 
 import { ensureStyles } from "./styles";
 import { preferredLanguages, translator, type Dict } from "./i18n";
-import { looksLikeZip, readPkpass } from "./pkpass";
+import { readWallet } from "./read";
 import { renderCard } from "./render";
 import type { Card } from "./model";
 
@@ -45,8 +45,7 @@ export function createWalletView(
   const urls: string[] = [];
   let cards: Card[] = [];
   try {
-    if (!looksLikeZip(input.bytes)) throw new Error("not a zip archive");
-    cards = readPkpass(input.bytes, options.languages ?? preferredLanguages());
+    cards = readWallet(input.bytes, options.languages ?? preferredLanguages(), t);
     const list = document.createElement("div");
     list.className = "wv-list";
     cards.forEach((card, i) => {
@@ -74,5 +73,8 @@ export function createWalletView(
 }
 
 export { readPkpass, looksLikeZip } from "./pkpass";
+export { readWallet } from "./read";
+export { readBoardingPass, looksLikeBcbp } from "./boardingpass";
+export { readHealthCard, looksLikeHealthCard } from "./healthcard";
 export { setLocale, type Dict } from "./i18n";
 export type { Card, CardField, CardBarcode, CardStyle } from "./model";

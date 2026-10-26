@@ -1,6 +1,6 @@
 // Synthetic passes for the tests and the demo. Every name, code and number is invented.
 
-import { strToU8, zipSync } from "fflate";
+import { deflateSync, strToU8, zipSync } from "fflate";
 
 // A 16x16 opaque PNG, enough for the image slots.
 const PNG = Uint8Array.from(
@@ -102,4 +102,48 @@ export function makeBundle(passes: Uint8Array[]): Uint8Array {
   const files: Record<string, Uint8Array> = {};
   passes.forEach((p, i) => (files[`pass${i + 1}.pkpass`] = p));
   return zipSync(files, { level: 0 });
+}
+
+const b64url = (b: Uint8Array) => btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+// A SMART Health Card JWS whose signature is a placeholder: the viewer never checks it.
+export function makeHealthCardJws(extra: PassJson[] = []): string {
+  const payload = {
+    iss: "https://issuer.example.com/demo",
+    nbf: 1750000000,
+    vc: {
+      type: ["https://smarthealth.cards#health-card"],
+      credentialSubject: {
+        fhirVersion: "4.0.1",
+        fhirBundle: {
+          resourceType: "Bundle",
+          type: "collection",
+          entry: [
+            { resource: { resourceType: "Patient", name: [{ family: "Example", given: ["Jane", "Q."] }], birthDate: "1980-02-03" } },
+            {
+              resource: {
+                resourceType: "Immunization",
+                vaccineCode: { coding: [{ system: "http://hl7.org/fhir/sid/cvx", code: "208" }] },
+                occurrenceDateTime: "2021-04-05",
+                performer: [{ actor: { display: "Demo Clinic" } }],
+                lotNumber: "LOT42",
+              },
+            },
+            ...extra.map((resource) => ({ resource })),
+          ],
+        },
+      },
+    },
+  };
+  const header = { zip: "DEF", alg: "ES256", kid: "demo" };
+  const enc = (o: unknown) => b64url(strToU8(JSON.stringify(o)));
+  return `${enc(header)}.${b64url(deflateSync(strToU8(JSON.stringify(payload))))}.${b64url(new Uint8Array(64))}`;
+}
+
+export function healthCardFile(jws: string): Uint8Array {
+  return strToU8(JSON.stringify({ verifiableCredential: [jws] }));
+}
+
+export function healthCardLink(jws: string): string {
+  return "shc:/" + [...jws].map((c) => String(c.charCodeAt(0) - 45).padStart(2, "0")).join("");
 }

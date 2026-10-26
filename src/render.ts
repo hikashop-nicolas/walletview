@@ -62,25 +62,25 @@ function primaryRow(card: Card): HTMLElement | null {
   return wrap;
 }
 
-function barcodeBox(card: Card, t: T, alive: () => boolean, urls: string[]): HTMLElement | null {
-  const b = card.barcodes[0];
-  if (!b) return null;
-  const box = el("div", "wv-code");
-  drawBarcode(b).then(
-    (url) => {
-      if (!alive()) return URL.revokeObjectURL(url);
-      urls.push(url);
-      const i = img(url, b.format === "qr" || b.format === "aztec" ? "wv-sq" : "");
-      i.alt = b.altText || t("barcode");
-      box.prepend(i);
-    },
-    () => {
-      if (alive()) box.prepend(el("small", undefined, t("barcodeFailed")));
-    },
-  );
-  const caption = b.altText ?? (b.format === "code128" ? b.message : "");
-  if (caption) box.appendChild(el("small", undefined, caption));
-  return box;
+function barcodeBox(card: Card, t: T, alive: () => boolean, urls: string[]): HTMLElement[] {
+  return card.barcodes.slice(0, 6).map((b) => {
+    const box = el("div", "wv-code");
+    drawBarcode(b).then(
+      (url) => {
+        if (!alive()) return URL.revokeObjectURL(url);
+        urls.push(url);
+        const i = img(url, b.format === "qr" || b.format === "aztec" ? "wv-sq" : "");
+        i.alt = b.altText || t("barcode");
+        box.prepend(i);
+      },
+      () => {
+        if (alive()) box.prepend(el("small", undefined, t("barcodeFailed")));
+      },
+    );
+    const caption = b.altText ?? (b.format === "code128" ? b.message : "");
+    if (caption) box.appendChild(el("small", undefined, caption));
+    return box;
+  });
 }
 
 export function renderCard(card: Card, t: T, alive: () => boolean, urls: string[]): HTMLElement {
@@ -112,8 +112,7 @@ export function renderCard(card: Card, t: T, alive: () => boolean, urls: string[
     const list = fieldList(group, "");
     if (list) article.appendChild(list);
   }
-  const code = barcodeBox(card, t, alive, urls);
-  if (code) article.appendChild(code);
+  for (const box of barcodeBox(card, t, alive, urls)) article.appendChild(box);
   if (card.images.footer) article.appendChild(img(card.images.footer, "wv-footer"));
 
   const frag = el("div");
