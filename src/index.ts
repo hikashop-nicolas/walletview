@@ -20,6 +20,8 @@ export interface WalletViewOptions {
   // Asked before a signature check contacts a website (health cards fetch the issuer's key).
   // Return false to cancel. Without it the check runs on the button press alone.
   confirmFetch?: (url: string) => Promise<boolean>;
+  // Remember a successful signature check in localStorage, per file (default true).
+  rememberChecks?: boolean;
 }
 
 export interface WalletViewHandle {
@@ -58,7 +60,7 @@ export function createWalletView(
         c.textContent = t("passN", { n: i + 1, total: cards.length });
         list.appendChild(c);
       }
-      list.appendChild(renderCard(card, t, () => alive, urls, options.confirmFetch));
+      list.appendChild(renderCard(card, t, () => alive, urls, options.confirmFetch, options.rememberChecks !== false));
     });
     root.appendChild(list);
   } catch (e) {

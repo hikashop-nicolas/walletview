@@ -5,7 +5,6 @@ import { unzipSync } from "fflate";
 import { bytesOf, children, contentOf, oidOf, parseDer, textOf, type Der } from "./der";
 import type { VerifyOutcome } from "./model";
 
-type T = (key: string, vars?: Record<string, string | number>) => string;
 type Confirm = (url: string) => Promise<boolean>;
 type Json = Record<string, unknown>;
 
@@ -27,9 +26,9 @@ const bytesToB64url = (b: ArrayBuffer): string => btoa(String.fromCharCode(...ne
 
 import { issuerHost } from "./issuer";
 
-export async function verifyHealthCard(jws: string, t: T, confirm?: Confirm): Promise<VerifyOutcome> {
+export async function verifyHealthCard(jws: string, confirm?: Confirm): Promise<VerifyOutcome> {
   const [h, p, s] = jws.split(".");
-  if (!h || !p || !s) return { status: "failed", lines: [t("sigBad")] };
+  if (!h || !p || !s) return { status: "failed", message: ["sigBad"] };
   let header: Json;
   let payload: Json;
   try {
@@ -38,15 +37,15 @@ export async function verifyHealthCard(jws: string, t: T, confirm?: Confirm): Pr
     const { inflateSync } = await import("fflate");
     payload = JSON.parse(new TextDecoder().decode(header.zip === "DEF" ? inflateSync(raw) : raw)) as Json;
   } catch {
-    return { status: "failed", lines: [t("sigBad")] };
+    return { status: "failed", message: ["sigBad"] };
   }
   const iss = typeof payload.iss === "string" ? payload.iss.replace(/\/+$/, "") : "";
   const host = issuerHost(iss);
-  if (!host) return { status: "unavailable", lines: [t("sigIssuer")] };
-  if (header.alg !== "ES256" || typeof header.kid !== "string") return { status: "unavailable", lines: [t("sigUnsupported")] };
+  if (!host) return { status: "unavailable", message: ["sigIssuer"] };
+  if (header.alg !== "ES256" || typeof header.kid !== "string") return { status: "unavailable", message: ["sigUnsupported"] };
 
   const url = `${iss}/.well-known/jwks.json`;
-  if (confirm && !(await confirm(url))) return { status: "unavailable", lines: [t("sigCancelled")] };
+  if (confirm && !(await confirm(url))) return { status: "unavailable", message: ["sigCancelled"] };
   let keys: unknown;
   try {
     const ctl = new AbortController();
@@ -58,21 +57,21 @@ export async function verifyHealthCard(jws: string, t: T, confirm?: Confirm): Pr
     if (text.length > 200000) throw new Error("too large");
     keys = (JSON.parse(text) as Json).keys;
   } catch {
-    return { status: "unavailable", lines: [t("sigNetwork", { host })] };
+    return { status: "unavailable", message: ["sigNetwork", { host }] };
   }
   const jwk = Array.isArray(keys) ? (keys as Json[]).find((k) => k && k.kid === header.kid) : undefined;
-  if (!jwk) return { status: "failed", lines: [t("sigNoKey", { host })] };
+  if (!jwk) return { status: "failed", message: ["sigNoKey", { host }] };
   try {
     if (jwk.kty !== "EC" || jwk.crv !== "P-256" || typeof jwk.x !== "string" || typeof jwk.y !== "string") throw new Error("key type");
     const thumb = bytesToB64url(await subtle().digest("SHA-256", new TextEncoder().encode(JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x, y: jwk.y }))));
-    if (thumb !== header.kid) return { status: "failed", lines: [t("sigKeyId", { host })] };
+    if (thumb !== header.kid) return { status: "failed", message: ["sigKeyId", { host }] };
     const key = await subtle().importKey("jwk", { kty: "EC", crv: "P-256", x: jwk.x, y: jwk.y }, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
     const ok = await subtle().verify({ name: "ECDSA", hash: "SHA-256" }, key, b64urlToBytes(s) as BufferSource, new TextEncoder().encode(`${h}.${p}`));
-    if (!ok) return { status: "failed", lines: [t("sigBad")] };
+    if (!ok) return { status: "failed", message: ["sigBad"] };
   } catch {
-    return { status: "unavailable", lines: [t("sigUnsupported")] };
+    return { status: "unavailable", message: ["sigUnsupported"] };
   }
-  return { status: "ok", lines: [t("sigOk", { host }), t("sigTrust")] };
+  return { status: "ok", message: ["sigOk", { host }], detail: ["sigTrust"] };
 }
 
 // ---------------------------------------------------------------- Apple Wallet pass
@@ -177,27 +176,27 @@ function parseSignature(b: Uint8Array): Signed {
 
 const same = (a: Uint8Array, b: Uint8Array): boolean => a.length === b.length && a.every((x, i) => x === b[i]);
 
-export async function verifyPkpass(zip: Uint8Array, t: T): Promise<VerifyOutcome> {
+export async function verifyPkpass(zip: Uint8Array): Promise<VerifyOutcome> {
   let files: Record<string, Uint8Array>;
   try {
     files = unzipSync(zip);
   } catch {
-    return { status: "failed", lines: [t("pkBad")] };
+    return { status: "failed", message: ["pkBad"] };
   }
   const manifestBytes = files["manifest.json"];
   const sigBytes = files["signature"];
-  if (!manifestBytes || !sigBytes) return { status: "failed", lines: [t("pkNoSig")] };
+  if (!manifestBytes || !sigBytes) return { status: "failed", message: ["pkNoSig"] };
 
   let signed: Signed;
   try {
     signed = parseSignature(sigBytes);
   } catch {
-    return { status: "unavailable", lines: [t("sigUnsupported")] };
+    return { status: "unavailable", message: ["sigUnsupported"] };
   }
-  if (!signed.hash) return { status: "unavailable", lines: [t("sigUnsupported")] };
+  if (!signed.hash) return { status: "unavailable", message: ["sigUnsupported"] };
 
   const digest = new Uint8Array(await subtle().digest(signed.hash, manifestBytes as BufferSource));
-  if (!same(digest, signed.messageDigest)) return { status: "failed", lines: [t("pkManifest")] };
+  if (!same(digest, signed.messageDigest)) return { status: "failed", message: ["pkManifest"] };
 
   const candidates = signed.certs.filter((c) => !signed.signerSerial || !signed.signerIssuer || (same(c.serial, signed.signerSerial) && same(c.issuer, signed.signerIssuer)));
   let signer: Cert | null = null;
@@ -213,13 +212,15 @@ export async function verifyPkpass(zip: Uint8Array, t: T): Promise<VerifyOutcome
       // try the next certificate
     }
   }
-  if (!signer) return { status: signed.certs.some((c) => c.spkiAlg === OID_RSA) ? "failed" : "unavailable", lines: [t(signed.certs.some((c) => c.spkiAlg === OID_RSA) ? "pkBadSig" : "sigUnsupported")] };
+  if (!signer) return signed.certs.some((c) => c.spkiAlg === OID_RSA)
+      ? { status: "failed", message: ["pkBadSig"] }
+      : { status: "unavailable", message: ["sigUnsupported"] };
 
   let listed: Json;
   try {
     listed = JSON.parse(new TextDecoder().decode(manifestBytes)) as Json;
   } catch {
-    return { status: "failed", lines: [t("pkManifest")] };
+    return { status: "failed", message: ["pkManifest"] };
   }
   const changed: string[] = [];
   for (const [name, want] of Object.entries(listed)) {
@@ -229,7 +230,7 @@ export async function verifyPkpass(zip: Uint8Array, t: T): Promise<VerifyOutcome
   for (const name of Object.keys(files)) {
     if (name !== "manifest.json" && name !== "signature" && !(name in listed) && !name.endsWith("/")) changed.push(name);
   }
-  const who = [signer.subject.cn, signer.subject.o].filter(Boolean).join(", ");
-  if (changed.length) return { status: "failed", lines: [t("pkChanged", { files: changed.slice(0, 5).join(", ") })] };
-  return { status: "ok", lines: [t("pkOk", { signer: who }), t("pkChain", { issuer: signer.issuerName.cn })] };
+  const who = signer.subject.o || signer.subject.cn;
+  if (changed.length) return { status: "failed", message: ["pkChanged", { files: changed.slice(0, 5).join(", ") }] };
+  return { status: "ok", message: ["pkOk", { signer: who }], detail: ["pkChain", { issuer: signer.issuerName.cn }] };
 }

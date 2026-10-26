@@ -4,6 +4,7 @@
 
 import { inflateSync } from "fflate";
 import { CVX, LOINC } from "./codes";
+import { sha256Hex } from "./checks";
 import { issuerHost } from "./issuer";
 import type { Card, CardBarcode, CardField } from "./model";
 
@@ -159,7 +160,7 @@ function cardFrom(jws: string, t: T, lang: string | undefined): Card {
     auxiliary: records,
     back: [...details, ...(iss ? [{ label: t("issuer"), value: iss }] : []), ...(issued ? [{ label: t("issued"), value: issued }] : [])],
     barcodes: shcBarcodes(jws),
-    verify: { host: issuerHost(iss.replace(/\/+$/, "")) ?? undefined, run: (confirm) => import("./verify").then((m) => m.verifyHealthCard(jws, t, confirm)) },
+    verify: { host: issuerHost(iss.replace(/\/+$/, "")) ?? undefined, key: () => sha256Hex(new TextEncoder().encode(jws)), run: (confirm) => import("./verify").then((m) => m.verifyHealthCard(jws, confirm)) },
     images: {},
     release: () => {},
   };

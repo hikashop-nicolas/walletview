@@ -61,6 +61,12 @@ objects, and `readPkpass`, `readHealthCard` and `readBoardingPass` read one form
     changed afterwards. It does not check the certificate chain up to Apple, so it cannot tell a
     genuine pass from one signed by someone else's certificate.
   - an IATA boarding pass string carries no signature to check.
+
+  The card shows one quiet line: "Not verified" with the button. A good result becomes "Signed by
+  ..." (tap it for the details) and is remembered in `localStorage`, keyed by a hash of the file,
+  so the same file opens already marked as signed. Only the result is stored, never the file; a
+  changed file does not inherit it, and a failed check is not stored. Pass `rememberChecks: false`
+  to turn that off.
 - Names vaccines (CVX) and lab tests (LOINC) from built-in tables, about 10 KB gzipped. The LOINC
   table is a subset of about 380 common tests; others show their code. See `NOTICE.md`.
 - Treats the file as untrusted: only the files it needs are inflated and capped in number and

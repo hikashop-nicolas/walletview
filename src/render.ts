@@ -2,7 +2,8 @@
 // taken from a pass are validated colors and blob URLs this library created.
 
 import { drawBarcode } from "./barcode";
-import type { Card, CardField } from "./model";
+import { loadCheck, saveCheck } from "./checks";
+import type { Card, CardField, VerifyOutcome } from "./model";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -83,34 +84,75 @@ function barcodeBox(card: Card, t: T, alive: () => boolean, urls: string[]): HTM
   });
 }
 
-// The "signature not checked" note, with a button that runs the check when the file has one.
-function signatureNote(card: Card, t: T, alive: () => boolean, confirm?: (url: string) => Promise<boolean>): HTMLElement {
-  const note = el("p", "wv-note");
-  note.appendChild(document.createTextNode(t("unverified")));
+// One quiet line about the signature: not verified with a button, or the result. A good result
+// is remembered, so the same file opens already marked as signed.
+function signatureRow(
+  card: Card,
+  t: T,
+  alive: () => boolean,
+  confirm: ((url: string) => Promise<boolean>) | undefined,
+  remember: boolean,
+): HTMLElement | null {
   const verify = card.verify;
-  if (!verify) return note;
-  const button = el("button", "wv-btn", verify.host ? t("verifyHost", { host: verify.host }) : t("verify"));
-  button.type = "button";
-  button.addEventListener("click", () => {
-    button.disabled = true;
-    button.textContent = t("verifying");
-    verify.run(confirm).then(
+  if (!verify) return null;
+  const row = el("div", "wv-sig");
+  const msg = (m: [string, Record<string, string | number>?]) => t(m[0], m[1]);
+  let id = "";
+
+  const button = (label: string, onClick: () => void): HTMLButtonElement => {
+    const b = el("button", "wv-link", label);
+    b.type = "button";
+    b.addEventListener("click", onClick);
+    return b;
+  };
+
+  const idle = (): void => {
+    row.className = "wv-sig";
+    row.replaceChildren(el("span", undefined, t("unverified")), button(verify.host ? t("verifyHost", { host: verify.host }) : t("verify"), run));
+  };
+
+  const show = (outcome: VerifyOutcome, at?: number): void => {
+    row.className = `wv-sig wv-sig-${outcome.status}`;
+    row.setAttribute("role", "status");
+    const mark = outcome.status === "ok" ? "\u2713" : outcome.status === "failed" ? "\u2717" : "!";
+    if (outcome.status === "ok") {
+      const details = el("details");
+      details.appendChild(el("summary", undefined, `${mark} ${msg(outcome.message)}`));
+      const more = el("p");
+      if (outcome.detail) more.appendChild(document.createTextNode(msg(outcome.detail) + " "));
+      if (at) more.appendChild(document.createTextNode(t("checkedOn", { date: new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(at) }) + " "));
+      more.appendChild(button(t("recheck"), run));
+      details.appendChild(more);
+      row.replaceChildren(details);
+    } else {
+      row.replaceChildren(el("span", undefined, `${mark} ${msg(outcome.message)}`));
+      if (outcome.status === "unavailable") row.appendChild(button(t("recheck"), run));
+    }
+  };
+
+  function run(): void {
+    row.replaceChildren(el("span", undefined, t("verifying")));
+    verify!.run(confirm).then(
       (outcome) => {
         if (!alive()) return;
-        note.textContent = "";
-        note.className = `wv-note wv-note-${outcome.status}`;
-        note.setAttribute("role", "status");
-        for (const line of outcome.lines) note.appendChild(el("div", undefined, line));
+        if (remember && id) saveCheck(id, outcome);
+        show(outcome);
       },
-      () => {
-        if (!alive()) return;
-        button.disabled = false;
-        button.textContent = verify.host ? t("verifyHost", { host: verify.host }) : t("verify");
-      },
+      () => alive() && idle(),
     );
-  });
-  note.appendChild(button);
-  return note;
+  }
+
+  verify.key().then(
+    (k) => {
+      if (!alive()) return;
+      id = k;
+      const stored = remember ? loadCheck(k) : null;
+      if (stored) show(stored.outcome, stored.at);
+      else idle();
+    },
+    () => alive() && idle(),
+  );
+  return row;
 }
 
 export function renderCard(
@@ -119,6 +161,7 @@ export function renderCard(
   alive: () => boolean,
   urls: string[],
   confirm?: (url: string) => Promise<boolean>,
+  remember = true,
 ): HTMLElement {
   const article = el("article", "wv-card");
   article.setAttribute("role", "group");
@@ -156,7 +199,8 @@ export function renderCard(
   frag.appendChild(article);
   if (card.voided) frag.appendChild(el("p", "wv-note wv-note-warn", t("voided")));
   if (card.expired) frag.appendChild(el("p", "wv-note wv-note-warn", t("expired")));
-  frag.appendChild(signatureNote(card, t, alive, confirm));
+  const sig = signatureRow(card, t, alive, confirm, remember);
+  if (sig) frag.appendChild(sig);
   if (card.back.length) {
     const back = el("section", "wv-back");
     back.appendChild(el("h2", undefined, t("details")));

@@ -22,10 +22,14 @@ export interface CardImages {
 
 export type CardStyle = "boardingPass" | "eventTicket" | "coupon" | "storeCard" | "generic";
 
+// A message as a string key plus its values, so a stored result is translated when shown.
+export type Msg = [key: string, vars?: Record<string, string | number>];
+
 export interface VerifyOutcome {
   status: "ok" | "failed" | "unavailable";
-  // Short sentences for the person, already translated.
-  lines: string[];
+  message: Msg;
+  // A second sentence worth knowing, shown on request.
+  detail?: Msg;
 }
 
 export interface Card {
@@ -47,7 +51,12 @@ export interface Card {
   expired?: boolean;
   // Present when the file carries a signature that can be checked on request. `host` is the
   // site a check would contact, when there is one.
-  verify?: { host?: string; run(confirm?: (url: string) => Promise<boolean>): Promise<VerifyOutcome> };
+  verify?: {
+    host?: string;
+    // Identifies this exact file, so a stored result is never shown for a different one.
+    key(): Promise<string>;
+    run(confirm?: (url: string) => Promise<boolean>): Promise<VerifyOutcome>;
+  };
   // Frees the blob URLs held by `images`.
   release(): void;
 }

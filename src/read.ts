@@ -13,7 +13,7 @@ export function readWallet(
   langs: string[],
   t: (key: string, vars?: Record<string, string | number>) => string,
 ): Card[] {
-  if (looksLikeZip(bytes)) return readPkpass(bytes, langs, t);
+  if (looksLikeZip(bytes)) return readPkpass(bytes, langs);
   if (bytes.length <= MAX_TEXT && !bytes.subarray(0, 4096).includes(0)) {
     const text = new TextDecoder().decode(bytes).replace(/^﻿/, "");
     if (looksLikeHealthCard(text)) return readHealthCard(text, t, langs[0]);

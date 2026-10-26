@@ -22,7 +22,7 @@ describe.skipIf(!dir)("real sample files", () => {
         console.log(f, c.style, `fields=${shown.length}`, `barcodes=${c.barcodes.map((b) => b.format)}`, `images=${Object.entries(c.images).filter(([, v]) => v).map(([k]) => k)}`);
         // Signatures too: health cards fetch their issuer's key, so this needs the network.
         const outcome = await c.verify?.run();
-        console.log(f, "signature:", outcome?.status, outcome?.lines[0]);
+        console.log(f, "signature:", outcome?.status, outcome?.message.join(" "));
         c.release();
       }
     }, 30000);
