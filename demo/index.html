@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>walletview demo</title>
+    <style>
+      html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
+      #app { display: flex; flex-direction: column; height: 100%; }
+      header { padding: 8px 12px; border-bottom: 1px solid #e4e6eb; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+      header b { font-size: 14px; }
+      header label, header button { font-size: 13px; cursor: pointer; }
+      header small { color: #667; font-size: 12px; }
+      #viewer { flex: 1 1 auto; min-height: 0; }
+      #drop { display: flex; align-items: center; justify-content: center; height: 100%; color: #667; font-size: 15px; text-align: center; padding: 24px; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <b>walletview</b>
+        <label>Open a pass <input id="file" type="file" accept=".pkpass,.pkpasses" /></label>
+        <button id="s1" type="button">Sample boarding pass</button>
+        <button id="s2" type="button">Sample ticket</button>
+        <button id="s3" type="button">Sample bundle</button>
+        <small>or drop one anywhere · everything stays in your browser</small>
+      </header>
+      <div id="viewer"><div id="drop">Drop an Apple Wallet pass here (.pkpass or .pkpasses)</div></div>
+    </div>
+    <script type="module" src="./demo.ts"></script>
+  </body>
+</html>
