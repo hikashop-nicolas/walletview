@@ -34,7 +34,7 @@ handle.destroy();
 
 Options: `languages` (the pass translation to prefer, default the browser's) and `i18n`
 (overrides for the viewer's own strings). The viewer ships English, French, German, Spanish,
-Portuguese, Russian and Chinese.
+Portuguese, Russian, Chinese, Japanese, Italian, Polish, Korean and Turkish.
 
 Theme it with the `--wv-canvas`, `--wv-text`, `--wv-muted`, `--wv-surface` and `--wv-border`
 CSS variables on any ancestor. The card itself keeps the colours the pass asks for.
